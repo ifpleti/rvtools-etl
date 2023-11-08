@@ -4,6 +4,7 @@ import os
 import tempfile
 import uuid
 import pandas as pd
+import json
 from io import BytesIO
 import base64
 from openpyxl import load_workbook
@@ -61,7 +62,7 @@ def convert_xlsx_to_df(req: func.HttpRequest) -> func.HttpResponse:
         excel_dfs["vMultiPath"]["vMultiPathModel"] = excel_dfs["vMultiPath"][
             "vMultiPathModel"
         ].apply(str)
-        excel_parquets = {}
+        excel_parquets = []
         for key, value in excel_dfs.items():
             try:
                 if (
@@ -86,18 +87,24 @@ def convert_xlsx_to_df(req: func.HttpRequest) -> func.HttpResponse:
                 page_name = parquet_name.replace(".parquet", "")
                 # Leer el archivo parquet y almacenarlo en el diccionario
                 with open(os.path.join(working_dir, parquet_name), "rb") as f:
-                    excel_parquets[page_name] = base64.b64encode(f.read()).decode('utf-8')
+                    page_parquet = {}
+                    page_parquet["page_name"] = page_name
+                    page_parquet["content"] = base64.b64encode(f.read()).decode("utf-8")
+                    excel_parquets.append(page_parquet)
+                    logging.info(
+                        f"File {parquet_name} read successfully and stored in the excel_parquets dictionary."
+                    )
 
-        logging.info(excel_parquets)
-
-        
+        # Return the excel_parquets dictionary as a JSON object
         logging.info(
             f"Hello, {filename}. This HTTP triggered function executed successfully."
         )
-
         return func.HttpResponse(
-            f"Hello, {filename}. This HTTP triggered function executed successfully."
+            headers={"Content-Type": "application/json"},
+            body=json.dumps(excel_parquets),
+            status_code=200,
         )
+
     else:
         return func.HttpResponse(
             "This HTTP triggered function executed unsuccessfully.", status_code=400
