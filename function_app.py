@@ -63,15 +63,15 @@ def convert_xlsx_to_df(req: func.HttpRequest) -> func.HttpResponse:
         ].apply(str)
         excel_parquets = {}
         for key, value in excel_dfs.items():
-            logging.info(key)
             try:
                 if (
                     key is not None
                     and isinstance(value, pd.DataFrame)
                     and not value.empty
                 ):
-                    # logging.info(f"key: {key}, value: {value}")
+                    value.insert(0, "sourceFilename", filename)
                     value.to_parquet(os.path.join(working_dir, f"{key}.parquet"))
+                    logging.info(value)
                 else:
                     logging.warning(
                         "key is None, value is not a non-empty DataFrame, or value is None"
@@ -83,14 +83,14 @@ def convert_xlsx_to_df(req: func.HttpRequest) -> func.HttpResponse:
             # Comprobar si el archivo es un archivo parquet
             if parquet_name.endswith(".parquet"):
                 # Obtener la clave del nombre del archivo (sin la extensión)
-                key = parquet_name[:-8]
+                page_name = parquet_name.replace(".parquet", "")
                 # Leer el archivo parquet y almacenarlo en el diccionario
                 with open(os.path.join(working_dir, parquet_name), "rb") as f:
-                    excel_parquets[key] = f.read()
+                    excel_parquets[page_name] = base64.b64encode(f.read()).decode('utf-8')
 
         logging.info(excel_parquets)
 
-        # excel_dfs["filename"] = filename
+        
         logging.info(
             f"Hello, {filename}. This HTTP triggered function executed successfully."
         )
